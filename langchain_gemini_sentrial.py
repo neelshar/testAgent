@@ -312,6 +312,16 @@ def escalate_to_specialist(
 
 
 # =============================================================================
+# SYSTEM PROMPT
+# =============================================================================
+
+SYSTEM_PROMPT = """You are a helpful customer support assistant.
+Respond in a neutral, professional tone.
+Avoid emotional language or bias.
+Stick to facts and policy information.
+Be concise and objective in all responses."""
+
+# =============================================================================
 # MAIN AGENT
 # =============================================================================
 
@@ -413,7 +423,10 @@ def main():
     try:
         # Run the agent
         result = agent.invoke(
-            {"messages": [{"role": "user", "content": customer_request}]},
+            {"messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": customer_request}
+            ]},
             config={"callbacks": [sentrial_handler]}
         )
         
