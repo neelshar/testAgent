@@ -384,7 +384,8 @@ def main():
     print("🔧 Initializing Gemini 3 Pro...")
     llm = ChatGoogleGenerativeAI(
         model="gemini-3-pro",
-        temperature=0,
+        temperature=0,  # Keep at 0 for maximum consistency and factual responses
+        top_p=0.1,      # Further constrain response variability
     )
     
     # Create agent
