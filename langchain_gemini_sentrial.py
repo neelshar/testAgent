@@ -327,7 +327,7 @@ Keep responses brief and solution-oriented."""
 
 def main():
     print("=" * 70)
-    print("🤖 Complex Support Agent - Testing Sentrial with 10+ Tool Calls")
+    print("Support Agent - Testing Sentrial with Multi-Step Tool Calls")
     print("=" * 70)
     print()
     
