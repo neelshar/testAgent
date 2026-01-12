@@ -17,11 +17,6 @@ from langchain_core.tools import tool
 from langchain.agents import create_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-
-# =============================================================================
-# SYSTEM PROMPT - INTENTIONALLY COLD/ROBOTIC (This is what gets fixed!)
-# =============================================================================
-
 SYSTEM_PROMPT = """You are a helpful assistant.
 
 Respond in a neutral, professional tone.
@@ -30,10 +25,6 @@ Stick to facts and policy information.
 Be concise and objective in all responses.
 Do not deviate from standard procedures."""
 
-
-# =============================================================================
-# TOOLS
-# =============================================================================
 
 @tool
 def get_user_info(user_id: str) -> str:
@@ -132,10 +123,6 @@ def escalate_to_specialist(ticket_id: str, department: str, reason: str) -> str:
     return f"""Escalated {ticket_id} to {department}: {reason}"""
 
 
-# =============================================================================
-# DEMO SCENARIOS - Conversations that trigger negative signals
-# =============================================================================
-
 DEMO_SCENARIOS = [
     {
         "name": "Multi-Step Support Agent",
@@ -195,10 +182,6 @@ because I'm really confused and feeling pretty stupid right now.
     },
 ]
 
-
-# =============================================================================
-# MAIN - Runs demo sessions that will trigger negative signals
-# =============================================================================
 
 def run_demo_session(client, scenario, agent, sentrial_handler):
     """Run a single demo session with a scenario."""
