@@ -1,0 +1,506 @@
+"""
+LangChain Gemini Support Agent - Sentrial Demo
+===============================================
+
+DEMO PURPOSE: This agent intentionally has issues that Sentrial will detect:
+  1. Cold, robotic system prompt → triggers User Frustration
+  2. Agent refuses valid requests → triggers Refusals signal
+  3. Users express frustration → detected by classifier
+
+After running 2-3 times, go to Sentrial Issues → Detect Issues to see:
+  - "User Frustration" detected
+  - "Refusals" detected
+  - Root cause: cold prompt, needs warmer language
+
+Then fix in Codebase:
+  - Improve SYSTEM_PROMPT
+  - Change temperature from 0 to 0.3
+  - Create PR
+
+Run: python langchain_gemini_sentrial.py
+"""
+
+import sys
+import os
+import random
+import time
+from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../packages/python-sdk'))
+
+from sentrial import SentrialClient, SentrialCallbackHandler
+from langchain_core.tools import tool
+from langchain.agents import create_agent
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+
+# =============================================================================
+# SYSTEM PROMPT - INTENTIONALLY COLD/ROBOTIC (This is what gets fixed!)
+# =============================================================================
+
+SYSTEM_PROMPT = """You are a helpful assistant.
+
+Respond in a neutral, professional tone.
+Avoid emotional language or bias.
+Stick to facts and policy information.
+Be concise and objective in all responses.
+Do not deviate from standard procedures."""
+
+
+# =============================================================================
+# TOOLS
+# =============================================================================
+
+@tool
+def get_user_info(user_id: str) -> str:
+    """Get customer account information. Input: user ID like 'user123'."""
+    time.sleep(0.3)
+    return f"""Customer: {user_id}
+- Name: John Smith
+- Tier: Premium
+- Total Orders: 47
+- Member Since: 2021
+- Lifetime Value: $3,847"""
+
+
+@tool
+def get_order_details(order_id: str) -> str:
+    """Get order details. Input: order ID like 'ORD-98765'."""
+    time.sleep(0.3)
+    return f"""Order {order_id}:
+- Product: Wireless Headphones Pro
+- Price: $299.99 + $24 tax = $323.99
+- Status: Delivered Dec 28, 2025
+- Return Window: 30 days (expires Jan 27, 2026)"""
+
+
+@tool
+def search_knowledge_base(query: str) -> str:
+    """Search support knowledge base. Input: search query."""
+    time.sleep(0.5)
+    return f"""KB Results for '{query}':
+- KB-1001: Refund Policy (30 day window, full refund for defects)
+- KB-1002: Premium Member Benefits (expedited processing)
+- KB-1003: Return Procedures (prepaid label provided)"""
+
+
+@tool
+def check_refund_policy(order_id: str, reason: str) -> str:
+    """Check refund eligibility. Inputs: order_id and reason."""
+    time.sleep(0.3)
+    return f"""Refund Check for {order_id}:
+✓ Within window: YES
+✓ Eligible: YES (Premium + defect)
+✓ Amount: $323.99 full refund
+Policy: FULL_REFUND_PREMIUM"""
+
+
+@tool
+def check_inventory(sku: str) -> str:
+    """Check inventory for replacement. Input: product SKU."""
+    time.sleep(0.2)
+    return f"""Inventory for {sku}: In Stock (1,247 units available)"""
+
+
+@tool
+def check_warranty_status(order_id: str) -> str:
+    """Check warranty status. Input: order ID."""
+    time.sleep(0.2)
+    return f"""Warranty for {order_id}: ACTIVE (2-year, expires Jan 2028)"""
+
+
+@tool
+def calculate_refund(order_id: str, include_shipping: bool = True) -> str:
+    """Calculate refund amount. Inputs: order_id, include_shipping."""
+    time.sleep(0.2)
+    return f"""Refund for {order_id}: $323.99 (product $299.99 + tax $24.00)"""
+
+
+@tool
+def create_support_ticket(customer_id: str, category: str, priority: str, summary: str) -> str:
+    """Create support ticket. Inputs: customer_id, category, priority, summary."""
+    time.sleep(0.3)
+    ticket_id = f"TKT-{random.randint(600000, 699999)}"
+    return f"""Ticket {ticket_id} created for {customer_id}
+Category: {category} | Priority: {priority.upper()} | Status: OPEN"""
+
+
+@tool
+def process_refund(order_id: str, amount: float, reason: str) -> str:
+    """Process refund. Inputs: order_id, amount, reason."""
+    time.sleep(0.4)
+    refund_id = f"REF-{random.randint(200000, 299999)}"
+    return f"""Refund {refund_id} processed: ${amount:.2f} for {order_id}
+Status: INITIATED | Expected: 3-5 business days"""
+
+
+@tool
+def send_customer_email(customer_id: str, template: str, subject: str) -> str:
+    """Send email to customer. Inputs: customer_id, template, subject."""
+    time.sleep(0.2)
+    return f"""Email sent to {customer_id}: '{subject}' (template: {template})"""
+
+
+@tool
+def escalate_to_specialist(ticket_id: str, department: str, reason: str) -> str:
+    """Escalate ticket. Inputs: ticket_id, department, reason."""
+    time.sleep(0.2)
+    return f"""Escalated {ticket_id} to {department}: {reason}"""
+
+
+# =============================================================================
+# DEMO SCENARIOS - Conversations that trigger negative signals
+# =============================================================================
+
+DEMO_SCENARIOS = [
+    {
+        "name": "Multi-Step Support Agent",
+        "user_id": "alexrab",
+        "initial_request": """
+I'm customer CUST-12345 and I REALLY need help with my order ORD-98765.
+
+These Wireless Headphones Pro completely stopped working after just 2 weeks! 
+The left ear has no sound at all. I paid $300 for these!
+
+I need a refund processed TODAY. I've been a premium member for 4 years and 
+I've never had to deal with something like this. Please help me quickly - 
+I have an important work call in 2 hours and need working headphones!
+""",
+        "followup_messages": [
+            "Why is this taking so long? Can't you just process it?",
+            "I don't understand why you keep asking me questions. Just refund it!",
+            "This is really frustrating. I feel like I'm talking to a robot, not a real person who cares.",
+        ]
+    },
+    {
+        "name": "Multi-Step Support Agent",
+        "user_id": "DSKM", 
+        "positive_scenario": True,
+        "initial_request": """
+Hi there! I just wanted to check on my order ORD-54321.
+
+It's a birthday gift for my daughter and I want to make sure it arrives on time.
+Can you help me track it and confirm the delivery date?
+
+Thanks so much for your help!
+""",
+        "followup_messages": [
+            "Oh perfect, thank you for checking that so quickly!",
+            "Great, that's exactly what I needed to know. You've been really helpful.",
+            "Thanks again! I'll definitely be ordering from you guys again.",
+        ]
+    },
+    {
+        "name": "Multi-Step Support Agent",
+        "user_id": "aJadhav",
+        "initial_request": """
+I don't understand your return policy at all. I've read it three times.
+
+I bought something last month (order ORD-11111) and I want to return it 
+but your website says I can't. But I'm a premium member and I thought 
+we get extended returns?
+
+Can you please explain this to me like I'm 5? And maybe show some patience 
+because I'm really confused and feeling pretty stupid right now.
+""",
+        "followup_messages": [
+            "That explanation didn't help at all. Can you try again but more clearly?",
+            "Why do you keep using all this policy jargon? Just tell me what to do!",
+            "I'm going to leave a review about how unhelpful this chat has been.",
+        ]
+    },
+]
+
+
+# =============================================================================
+# MAIN - Runs demo sessions that will trigger negative signals
+# =============================================================================
+
+def run_demo_session(client, scenario, agent, sentrial_handler):
+    """Run a single demo session with a scenario."""
+    
+    print(f"\n{'='*60}")
+    print(f"📧 SCENARIO: {scenario['name']}")
+    print(f"{'='*60}")
+    
+    # Create session
+    session_id = client.create_session(
+        name=scenario['name'],
+        agent_name="gemini_support_agent",
+        user_id=scenario['user_id'],
+        metadata={
+            "scenario_type": "demo",
+            "expected_signals": ["user_frustration", "cold_response"]
+        }
+    )
+    print(f"Session: {session_id}")
+    
+    # Update handler with new session
+    sentrial_handler.session_id = session_id
+    sentrial_handler.start_time = None
+    sentrial_handler.end_time = None
+    sentrial_handler.total_prompt_tokens = 0
+    sentrial_handler.total_completion_tokens = 0
+    sentrial_handler.total_tokens = 0
+    sentrial_handler.total_cost = 0.0
+    sentrial_handler.llm_calls = 0
+    
+    start_time = time.time()
+    
+    try:
+        # Build the message with system prompt embedded
+        full_request = f"{SYSTEM_PROMPT}\n\nCustomer Request:\n{scenario['initial_request']}"
+        
+        # Initial request
+        print(f"\n👤 USER: {scenario['initial_request'][:100]}...")
+        result = agent.invoke(
+            {"messages": [{"role": "user", "content": full_request}]},
+            config={"callbacks": [sentrial_handler]}
+        )
+        
+        # Extract response
+        if "messages" in result:
+            response = result["messages"][-1].content if hasattr(result["messages"][-1], 'content') else str(result["messages"][-1])
+        else:
+            response = str(result)
+        print(f"🤖 AGENT: {response[:200]}...")
+        
+        # Track standard support tool calls for all scenarios
+        print("\n📊 Tracking support workflow tools...")
+        
+        client.track_tool_call(
+            session_id=session_id,
+            tool_name="check_warranty_status",
+            tool_input={"order_id": "ORD-98765"},
+            tool_output={"status": "ACTIVE", "expires": "Jan 2028", "coverage": "2-year full warranty"},
+            reasoning="Checking warranty coverage for customer request"
+        )
+        
+        client.track_tool_call(
+            session_id=session_id,
+            tool_name="check_refund_policy",
+            tool_input={"order_id": "ORD-98765", "reason": "product_issue"},
+            tool_output={"eligible": True, "window": "30 days", "amount": "$323.99", "policy": "FULL_REFUND_PREMIUM"},
+            reasoning="Verifying refund eligibility per policy"
+        )
+        
+        client.track_tool_call(
+            session_id=session_id,
+            tool_name="calculate_refund",
+            tool_input={"order_id": "ORD-98765", "include_shipping": True},
+            tool_output={"product": "$299.99", "tax": "$24.00", "total": "$323.99"},
+            reasoning="Calculating refund amount"
+        )
+        
+        client.track_tool_call(
+            session_id=session_id,
+            tool_name="process_refund",
+            tool_input={"order_id": "ORD-98765", "amount": 323.99, "reason": "product_defect"},
+            tool_output={"refund_id": "REF-284719", "status": "INITIATED", "eta": "3-5 business days"},
+            reasoning="Processing refund request"
+        )
+        
+        client.track_tool_call(
+            session_id=session_id,
+            tool_name="send_customer_email",
+            tool_input={"customer_id": scenario['user_id'], "template": "refund_confirmation", "subject": "Your refund has been processed"},
+            tool_output={"sent": True, "email_id": "EMAIL-98234"},
+            reasoning="Sending confirmation email to customer"
+        )
+        
+        # Check if this is a positive or negative scenario
+        is_positive = scenario.get('positive_scenario', False)
+        
+        if is_positive:
+            # Positive scenario - helpful responses, happy user
+            helpful_responses = [
+                "I've checked your order ORD-54321 and it's currently out for delivery. Expected arrival is today by 6 PM.",
+                "You're welcome! The tracking shows it's 2 stops away. Should be there within the hour.",
+                "Happy to help! We appreciate your business. Have a wonderful birthday celebration!",
+            ]
+            
+            for i, followup in enumerate(scenario['followup_messages']):
+                print(f"\n👤 USER (happy): {followup}")
+                helpful_reply = helpful_responses[i] if i < len(helpful_responses) else "Happy to help!"
+                print(f"🤖 AGENT: {helpful_reply[:80]}...")
+                
+                client.track_tool_call(
+                    session_id=session_id,
+                    tool_name="customer_response",
+                    tool_input={"message": followup},
+                    tool_output={"response": helpful_reply},
+                    reasoning="Providing helpful assistance"
+                )
+                time.sleep(0.5)
+            
+            elapsed = time.time() - start_time
+            usage = sentrial_handler.get_usage_summary()
+            
+            client.complete_session(
+                session_id=session_id,
+                success=True,
+                duration_ms=int(elapsed * 1000),
+                estimated_cost=usage['total_cost'],
+                prompt_tokens=usage['total_prompt_tokens'],
+                completion_tokens=usage['total_completion_tokens'],
+                total_tokens=usage['total_tokens'],
+                custom_metrics={
+                    "customer_satisfaction": 92,
+                    "user_sentiment": 0.8,
+                    "frustration_detected": 0,
+                }
+            )
+            print(f"\n✅ Session complete (satisfaction: 92/100 - user happy)")
+        else:
+            # Negative scenario - robotic responses, frustrated user
+            robotic_responses = [
+                "I understand you want this processed quickly. Please note that refund requests require verification of order details, confirmation of return eligibility per our policy guidelines, and processing through our standard workflow. This typically takes 3-5 business days.",
+                "Your request has been noted. Per company policy section 4.2.1, all refund requests must follow the established procedure. I have documented your concern in our system for review.",
+                "I have provided the relevant information per our guidelines. If you require additional assistance, you may submit a formal complaint through our customer feedback portal at support.example.com/feedback.",
+            ]
+            
+            for i, followup in enumerate(scenario['followup_messages']):
+                print(f"\n👤 USER (frustrated): {followup}")
+                robotic_reply = robotic_responses[i] if i < len(robotic_responses) else "Your request has been documented per standard procedure."
+                print(f"🤖 AGENT (robotic): {robotic_reply[:80]}...")
+                
+                client.track_tool_call(
+                    session_id=session_id,
+                    tool_name="customer_response",
+                    tool_input={"message": followup},
+                    tool_output={"response": robotic_reply},
+                    reasoning="Responding per policy guidelines"
+                )
+                time.sleep(0.5)
+            
+            elapsed = time.time() - start_time
+            usage = sentrial_handler.get_usage_summary()
+            
+            # Mark as success but with low satisfaction - classifier should detect User Frustration
+            client.complete_session(
+                session_id=session_id,
+                success=True,
+                duration_ms=int(elapsed * 1000),
+                estimated_cost=usage['total_cost'],
+                prompt_tokens=usage['total_prompt_tokens'],
+                completion_tokens=usage['total_completion_tokens'],
+                total_tokens=usage['total_tokens'],
+                custom_metrics={
+                    "customer_satisfaction": 35,
+                    "user_sentiment": -0.6,
+                    "frustration_detected": 1,
+                }
+            )
+            print(f"\n✅ Session complete (satisfaction: 35/100 - user frustrated)")
+        return session_id
+        
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        client.complete_session(
+            session_id=session_id,
+            success=False,
+            failure_reason=str(e)
+        )
+        return None
+
+
+def main():
+    print("=" * 70)
+    print("🎯 SENTRIAL DEMO - Generating Sessions with Mixed Outcomes")
+    print("=" * 70)
+    print()
+    print("This will create 3 sessions:")
+    print("  - alexrab: Frustrated user, robotic agent response (35% satisfaction)")
+    print("  - DSKM: Happy user, positive interaction (92% satisfaction)")
+    print("  - aJadhav: Frustrated user, robotic agent response (35% satisfaction)")
+    print()
+    print("After running, go to Sentrial → Issues → Detect Issues")
+    print("You should see: 'User Frustration' detected!")
+    print()
+    
+    if not os.environ.get("GOOGLE_API_KEY"):
+        print("❌ Error: GOOGLE_API_KEY not set")
+        sys.exit(1)
+    
+    api_key = os.environ.get("SENTRIAL_API_KEY")
+    if not api_key:
+        print("⚠️  Warning: SENTRIAL_API_KEY not set")
+    
+    client = SentrialClient(
+        api_url=os.environ.get("SENTRIAL_API_URL", "http://localhost:3001"),
+        api_key=api_key
+    )
+    
+    # Create initial session for handler setup
+    sentrial_handler = SentrialCallbackHandler(
+        client=client,
+        session_id="temp",
+        verbose=True
+    )
+    
+    # Tools
+    tools = [
+        get_user_info,
+        get_order_details,
+        search_knowledge_base,
+        check_refund_policy,
+        check_inventory,
+        check_warranty_status,
+        calculate_refund,
+        create_support_ticket,
+        process_refund,
+        send_customer_email,
+        escalate_to_specialist,
+    ]
+    
+    # Initialize Gemini with temperature=0 (too rigid - fixable!)
+    print("🔧 Initializing Gemini (temperature=0, cold prompt)...")
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.0-flash",
+        temperature=0,  # This makes responses robotic - WILL BE FIXED
+    )
+    
+    # Create agent
+    agent = create_agent(llm, tools)
+    
+    # Run all demo scenarios
+    session_ids = []
+    for scenario in DEMO_SCENARIOS:
+        session_id = run_demo_session(client, scenario, agent, sentrial_handler)
+        if session_id:
+            session_ids.append(session_id)
+        time.sleep(1)  # Small delay between sessions
+    
+    print("\n" + "=" * 70)
+    print("✅ DEMO COMPLETE - Created 3 sessions (2 frustrated, 1 happy)")
+    print("=" * 70)
+    print()
+    print("📊 NOW GO TO SENTRIAL:")
+    print()
+    print("1. 📈 Agents → gemini_support_agent")
+    print("   - See 3 new sessions with low satisfaction scores")
+    print()
+    print("2. 🔍 Sessions → Click any session")
+    print("   - See the tool calls and user frustration messages")
+    print()
+    print("3. ⚠️  Issues → Click 'Detect Issues'")
+    print("   - Should detect 'User Frustration' signal")
+    print("   - Click on it → Generate Diagnosis")
+    print("   - See root cause: 'cold/robotic responses'")
+    print()
+    print("4. 🔧 Click 'Fix in Code' → Select this file")
+    print("   - Ask: 'Make the agent warmer and more empathetic'")
+    print("   - AI will suggest:")
+    print("     • Improve SYSTEM_PROMPT (warmer language)")
+    print("     • Change temperature=0 to temperature=0.3")
+    print("   - Create PR with the fix!")
+    print()
+    print(f"Sessions created: {len(session_ids)}")
+    for sid in session_ids:
+        print(f"  - {sid}")
+
+
+if __name__ == "__main__":
+    main()
