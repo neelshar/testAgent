@@ -425,7 +425,7 @@ def main():
     print("🔧 Initializing Gemini (temperature=0, cold prompt)...")
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
-        temperature=0,  # This makes responses robotic - WILL BE FIXED
+        temperature=0.3,  # Warmer, more natural responses while staying consistent
     )
     
     # Create agent
