@@ -1,23 +1,5 @@
 """
-LangChain Gemini Support Agent - Sentrial Demo
-===============================================
-
-DEMO PURPOSE: This agent intentionally has issues that Sentrial will detect:
-  1. Cold, robotic system prompt → triggers User Frustration
-  2. Agent refuses valid requests → triggers Refusals signal
-  3. Users express frustration → detected by classifier
-
-After running 2-3 times, go to Sentrial Issues → Detect Issues to see:
-  - "User Frustration" detected
-  - "Refusals" detected
-  - Root cause: cold prompt, needs warmer language
-
-Then fix in Codebase:
-  - Improve SYSTEM_PROMPT
-  - Change temperature from 0 to 0.3
-  - Create PR
-
-Run: python langchain_gemini_sentrial.py
+LangChain Gemini Support Agent
 """
 
 import sys
