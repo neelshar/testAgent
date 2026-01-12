@@ -328,18 +328,18 @@ State facts clearly and proceed methodically through resolution steps."""
 
 def main():
     print("=" * 70)
-    print("🤖 Complex Support Agent - Testing Sentrial with 10+ Tool Calls")
+    print("Support Agent - Testing Sentrial with Multiple Tool Calls")
     print("=" * 70)
     print()
     
     # Check for API keys
     if not os.environ.get("GEMINI_API_KEY"):
-        print("❌ Error: GEMINI_API_KEY environment variable not set")
+        print("Error: GEMINI_API_KEY environment variable not set")
         sys.exit(1)
     
     api_key = os.environ.get("SENTRIAL_API_KEY")
     if not api_key:
-        print("⚠️  Warning: SENTRIAL_API_KEY not set")
+        print("Warning: SENTRIAL_API_KEY not set")
     
     # Initialize Sentrial client
     client = SentrialClient(
@@ -350,12 +350,12 @@ def main():
     AGENT_NAME = "gemini_support_agent"
     
     # Create session
-    print("📝 Creating Sentrial session...")
+    print("Creating Sentrial session...")
     session_id = client.create_session(
         name="Complex Multi-Step Support Agent Test",
         agent_name=AGENT_NAME,
     )
-    print(f"✓ Session ID: {session_id}\n")
+    print(f"Session ID: {session_id}\n")
     
     # Create callback handler
     sentrial_handler = SentrialCallbackHandler(
