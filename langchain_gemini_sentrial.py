@@ -315,11 +315,12 @@ def escalate_to_specialist(
 # SYSTEM PROMPT
 # =============================================================================
 
-SYSTEM_PROMPT = """You are a helpful customer support assistant.
-Respond in a neutral, professional tone.
-Avoid emotional language or bias.
-Stick to facts and policy information.
-Be concise and objective in all responses."""
+SYSTEM_PROMPT = """You are a customer support representative handling service requests.
+Maintain a professional, matter-of-fact tone at all times.
+Do not use enthusiastic language, exclamation points, or emotional expressions.
+Focus strictly on providing accurate information and following company procedures.
+Be direct and efficient - avoid unnecessary pleasantries or apologetic language.
+State facts clearly and proceed methodically through resolution steps."""
 
 # =============================================================================
 # MAIN AGENT
@@ -327,18 +328,18 @@ Be concise and objective in all responses."""
 
 def main():
     print("=" * 70)
-    print("🤖 Complex Support Agent - Testing Sentrial with 10+ Tool Calls")
+    print("Support Agent - Testing Sentrial with Multiple Tool Calls")
     print("=" * 70)
     print()
     
     # Check for API keys
     if not os.environ.get("GEMINI_API_KEY"):
-        print("❌ Error: GEMINI_API_KEY environment variable not set")
+        print("Error: GEMINI_API_KEY environment variable not set")
         sys.exit(1)
     
     api_key = os.environ.get("SENTRIAL_API_KEY")
     if not api_key:
-        print("⚠️  Warning: SENTRIAL_API_KEY not set")
+        print("Warning: SENTRIAL_API_KEY not set")
     
     # Initialize Sentrial client
     client = SentrialClient(
@@ -349,12 +350,12 @@ def main():
     AGENT_NAME = "gemini_support_agent"
     
     # Create session
-    print("📝 Creating Sentrial session...")
+    print("Creating Sentrial session...")
     session_id = client.create_session(
         name="Complex Multi-Step Support Agent Test",
         agent_name=AGENT_NAME,
     )
-    print(f"✓ Session ID: {session_id}\n")
+    print(f"Session ID: {session_id}\n")
     
     # Create callback handler
     sentrial_handler = SentrialCallbackHandler(
@@ -383,7 +384,8 @@ def main():
     print("🔧 Initializing Gemini 3 Pro...")
     llm = ChatGoogleGenerativeAI(
         model="gemini-3-pro",
-        temperature=0,
+        temperature=0,  # Keep at 0 for maximum consistency and factual responses
+        top_p=0.1,      # Further constrain response variability
     )
     
     # Create agent
