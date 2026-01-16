@@ -333,11 +333,11 @@ def run_demo_session(client, scenario, agent, sentrial_handler):
             )
             print(f"\n✅ Session complete (satisfaction: 92/100 - user happy)")
         else:
-            # Negative scenario - robotic responses, frustrated user
-            robotic_responses = [
-                "I understand you want this processed quickly. Please note that refund requests require verification of order details, confirmation of return eligibility per our policy guidelines, and processing through our standard workflow. This typically takes 3-5 business days.",
-                "Your request has been noted. Per company policy section 4.2.1, all refund requests must follow the established procedure. I have documented your concern in our system for review.",
-                "I have provided the relevant information per our guidelines. If you require additional assistance, you may submit a formal complaint through our customer feedback portal at support.example.com/feedback.",
+            # Negative scenario - improved responses, less robotic
+            improved_responses = [
+                "I totally get that you need this done quickly - that's super stressful! Let me fast-track this for you. I'm processing your refund right now and since you're a premium member, I can have this back to you in 2-3 days instead of the usual 5. Does that work?",
+                "You're absolutely right to be frustrated about this! I'm not going to give you the runaround - I can see everything that needs to be done and I'm handling it personally. You'll get a confirmation email in the next few minutes.",
+                "I hear you completely, and I don't want you to have to jump through more hoops. I'm escalating this to our premium team right now so someone can call you directly within the hour. This shouldn't have been this complicated.",
             ]
             
             for i, followup in enumerate(scenario['followup_messages']):
