@@ -406,8 +406,17 @@ def main():
     print("You should see: 'User Frustration' detected!")
     print()
     
-    if not os.environ.get("GOOGLE_API_KEY"):
+    # Validate required API keys
+    google_api_key = os.environ.get("GOOGLE_API_KEY")
+    if not google_api_key:
         print("❌ Error: GOOGLE_API_KEY not set")
+        print("Please set your Google AI API key:")
+        print("export GOOGLE_API_KEY='your-api-key-here'")
+        sys.exit(1)
+    
+    if google_api_key == "your-api-key-here" or len(google_api_key) < 20:
+        print("❌ Error: GOOGLE_API_KEY appears to be invalid or placeholder")
+        print("Please set a valid Google AI API key from: https://makersuite.google.com/app/apikey")
         sys.exit(1)
     
     api_key = os.environ.get("SENTRIAL_API_KEY")
@@ -441,15 +450,35 @@ def main():
         escalate_to_specialist,
     ]
     
-    # Initialize Gemini with temperature=0 (too rigid - fixable!)
-    print("🔧 Initializing Gemini (temperature=0, cold prompt)...")
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
-        temperature=0.3,  # Allows for more natural, empathetic responses while staying accurate
-    )
+    # Initialize Gemini with proper model configuration and error handling
+    print("🔧 Initializing Gemini with valid model...")
+    try:
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-pro",  # Use stable, well-supported model
+            temperature=0.3,  # Allows for more natural, empathetic responses while staying accurate
+            convert_system_message_to_human=True,  # Ensure system messages work properly
+        )
+        
+        # Test the connection with a simple call
+        print("🔍 Testing LLM connection...")
+        test_response = llm.invoke("Hello")
+        print("✅ LLM connection successful")
+        
+    except Exception as e:
+        print(f"❌ Error initializing LLM: {str(e)}")
+        print("Common fixes:")
+        print("  1. Verify GOOGLE_API_KEY is valid")
+        print("  2. Check internet connection")
+        print("  3. Ensure Google AI API is enabled for your account")
+        sys.exit(1)
     
     # Create agent
-    agent = create_agent(llm, tools)
+    try:
+        agent = create_agent(llm, tools)
+        print("✅ Agent created successfully")
+    except Exception as e:
+        print(f"❌ Error creating agent: {str(e)}")
+        sys.exit(1)
     
     # Run all demo scenarios
     session_ids = []
