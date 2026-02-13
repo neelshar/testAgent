@@ -441,11 +441,12 @@ def main():
         escalate_to_specialist,
     ]
     
-    # Initialize Gemini with temperature=0 (too rigid - fixable!)
-    print("🔧 Initializing Gemini (temperature=0, cold prompt)...")
+    # Initialize Gemini with proper model configuration
+    print("🔧 Initializing Gemini with valid model...")
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-1.5-pro",  # Use stable, well-supported model
         temperature=0.3,  # Allows for more natural, empathetic responses while staying accurate
+        convert_system_message_to_human=True,  # Ensure system messages work properly
     )
     
     # Create agent
