@@ -406,8 +406,17 @@ def main():
     print("You should see: 'User Frustration' detected!")
     print()
     
-    if not os.environ.get("GOOGLE_API_KEY"):
+    # Validate required API keys
+    google_api_key = os.environ.get("GOOGLE_API_KEY")
+    if not google_api_key:
         print("❌ Error: GOOGLE_API_KEY not set")
+        print("Please set your Google AI API key:")
+        print("export GOOGLE_API_KEY='your-api-key-here'")
+        sys.exit(1)
+    
+    if google_api_key == "your-api-key-here" or len(google_api_key) < 20:
+        print("❌ Error: GOOGLE_API_KEY appears to be invalid or placeholder")
+        print("Please set a valid Google AI API key from: https://makersuite.google.com/app/apikey")
         sys.exit(1)
     
     api_key = os.environ.get("SENTRIAL_API_KEY")
