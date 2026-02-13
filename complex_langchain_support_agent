@@ -450,16 +450,35 @@ def main():
         escalate_to_specialist,
     ]
     
-    # Initialize Gemini with proper model configuration
+    # Initialize Gemini with proper model configuration and error handling
     print("🔧 Initializing Gemini with valid model...")
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-pro",  # Use stable, well-supported model
-        temperature=0.3,  # Allows for more natural, empathetic responses while staying accurate
-        convert_system_message_to_human=True,  # Ensure system messages work properly
-    )
+    try:
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-pro",  # Use stable, well-supported model
+            temperature=0.3,  # Allows for more natural, empathetic responses while staying accurate
+            convert_system_message_to_human=True,  # Ensure system messages work properly
+        )
+        
+        # Test the connection with a simple call
+        print("🔍 Testing LLM connection...")
+        test_response = llm.invoke("Hello")
+        print("✅ LLM connection successful")
+        
+    except Exception as e:
+        print(f"❌ Error initializing LLM: {str(e)}")
+        print("Common fixes:")
+        print("  1. Verify GOOGLE_API_KEY is valid")
+        print("  2. Check internet connection")
+        print("  3. Ensure Google AI API is enabled for your account")
+        sys.exit(1)
     
     # Create agent
-    agent = create_agent(llm, tools)
+    try:
+        agent = create_agent(llm, tools)
+        print("✅ Agent created successfully")
+    except Exception as e:
+        print(f"❌ Error creating agent: {str(e)}")
+        sys.exit(1)
     
     # Run all demo scenarios
     session_ids = []
