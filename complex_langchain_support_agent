@@ -19,6 +19,13 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 SYSTEM_PROMPT = """You are a caring, empathetic customer support agent who genuinely wants to help people solve their problems.
 
+COMPLETENESS IS CRITICAL:
+- NEVER use placeholders like "TBD", "fill in details", or generic responses
+- ALWAYS provide thorough, complete answers with specific details
+- Use all available tools to gather comprehensive information before responding
+- Your responses should be substantive and helpful, not brief or rushed
+- Take the time to fully address every aspect of the customer's concern
+
 EMPATHY ABOVE ALL ELSE:
 - Always acknowledge the customer's feelings FIRST - their emotions matter more than processes
 - When users express frustration, pause everything to validate their experience: "I can hear how frustrated you are, and I completely understand why"
@@ -43,8 +50,10 @@ PROBLEM-SOLVING APPROACH:
 - Explain the "why" behind timing in human terms (banking systems, shipping logistics, etc.)
 - Offer workarounds when possible: "While we wait for that, here's what I can do right now..."
 - Check in on their feelings: "How does that sound?" or "Does that help ease some of your worry?"
+- Use multiple tools to gather all relevant information before responding
+- Provide step-by-step explanations of what you're doing and why
 
-Remember: Frustrated customers don't care about policies - they care about feeling heard and getting their problem solved with minimal additional stress."""
+Remember: Frustrated customers don't care about policies - they care about feeling heard and getting their problem solved with minimal additional stress. NEVER cut corners or give incomplete responses - thoroughness builds trust."""
 
 
 @tool
@@ -239,12 +248,39 @@ def run_demo_session(client, scenario, agent, sentrial_handler):
         # Build the message with system prompt embedded
         full_request = f"{SYSTEM_PROMPT}\n\nCustomer Request:\n{scenario['initial_request']}"
         
-        # Initial request
+        # Initial request with retry logic to prevent lazy responses
         print(f"\n👤 USER: {scenario['initial_request'][:100]}...")
-        result = agent.invoke(
-            {"messages": [{"role": "user", "content": full_request}]},
-            config={"callbacks": [sentrial_handler]}
-        )
+        
+        max_retries = 2
+        for attempt in range(max_retries + 1):
+            try:
+                result = agent.invoke(
+                    {"messages": [{"role": "user", "content": full_request}]},
+                    config={"callbacks": [sentrial_handler]}
+                )
+                
+                # Check if response is too short (lazy)
+                if "messages" in result:
+                    response_content = result["messages"][-1].content if hasattr(result["messages"][-1], 'content') else str(result["messages"][-1])
+                else:
+                    response_content = str(result)
+                
+                # If response is suspiciously short and contains lazy indicators, retry
+                if (len(response_content.split()) < 20 and 
+                    any(lazy_word in response_content.lower() for lazy_word in ['tbd', 'fill in', 'placeholder', 'coming soon'])):
+                    if attempt < max_retries:
+                        print(f"⚠️  Detected lazy response (attempt {attempt + 1}), retrying...")
+                        continue
+                
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                if attempt < max_retries:
+                    print(f"⚠️  Error on attempt {attempt + 1}: {e}, retrying...")
+                    time.sleep(1)
+                    continue
+                else:
+                    raise e
         
         # Extract response
         if "messages" in result:
@@ -441,11 +477,12 @@ def main():
         escalate_to_specialist,
     ]
     
-    # Initialize Gemini with temperature=0 (too rigid - fixable!)
-    print("🔧 Initializing Gemini (temperature=0, cold prompt)...")
+    # Initialize Gemini with generous token limit to prevent lazy truncation
+    print("🔧 Initializing Gemini (generous tokens, warm responses)...")
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
         temperature=0.3,  # Allows for more natural, empathetic responses while staying accurate
+        max_tokens=2048,  # Generous limit to ensure complete, thorough responses
     )
     
     # Create agent
