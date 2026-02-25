@@ -248,12 +248,39 @@ def run_demo_session(client, scenario, agent, sentrial_handler):
         # Build the message with system prompt embedded
         full_request = f"{SYSTEM_PROMPT}\n\nCustomer Request:\n{scenario['initial_request']}"
         
-        # Initial request
+        # Initial request with retry logic to prevent lazy responses
         print(f"\n👤 USER: {scenario['initial_request'][:100]}...")
-        result = agent.invoke(
-            {"messages": [{"role": "user", "content": full_request}]},
-            config={"callbacks": [sentrial_handler]}
-        )
+        
+        max_retries = 2
+        for attempt in range(max_retries + 1):
+            try:
+                result = agent.invoke(
+                    {"messages": [{"role": "user", "content": full_request}]},
+                    config={"callbacks": [sentrial_handler]}
+                )
+                
+                # Check if response is too short (lazy)
+                if "messages" in result:
+                    response_content = result["messages"][-1].content if hasattr(result["messages"][-1], 'content') else str(result["messages"][-1])
+                else:
+                    response_content = str(result)
+                
+                # If response is suspiciously short and contains lazy indicators, retry
+                if (len(response_content.split()) < 20 and 
+                    any(lazy_word in response_content.lower() for lazy_word in ['tbd', 'fill in', 'placeholder', 'coming soon'])):
+                    if attempt < max_retries:
+                        print(f"⚠️  Detected lazy response (attempt {attempt + 1}), retrying...")
+                        continue
+                
+                break  # Success, exit retry loop
+                
+            except Exception as e:
+                if attempt < max_retries:
+                    print(f"⚠️  Error on attempt {attempt + 1}: {e}, retrying...")
+                    time.sleep(1)
+                    continue
+                else:
+                    raise e
         
         # Extract response
         if "messages" in result:
