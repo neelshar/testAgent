@@ -441,11 +441,12 @@ def main():
         escalate_to_specialist,
     ]
     
-    # Initialize Gemini with temperature=0 (too rigid - fixable!)
-    print("🔧 Initializing Gemini (temperature=0, cold prompt)...")
+    # Initialize Gemini with generous token limit to prevent lazy truncation
+    print("🔧 Initializing Gemini (generous tokens, warm responses)...")
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.0-flash",
         temperature=0.3,  # Allows for more natural, empathetic responses while staying accurate
+        max_tokens=2048,  # Generous limit to ensure complete, thorough responses
     )
     
     # Create agent
