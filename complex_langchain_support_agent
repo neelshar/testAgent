@@ -157,6 +157,49 @@ def escalate_to_specialist(ticket_id: str, department: str, reason: str) -> str:
     return f"""Escalated {ticket_id} to {department}: {reason}"""
 
 
+@tool
+def get_document_content(document_id: str) -> str:
+    """Get full content of a specific knowledge base document. Input: document ID like 'KB-1001'."""
+    time.sleep(0.3)
+    
+    documents = {
+        "KB-1001": """REFUND POLICY - COMPLETE DOCUMENT
+        
+Standard Return Window: 30 days from delivery date
+Premium Member Return Window: 30 days from delivery date
+
+Refund Amounts:
+- Premium Members: 100% refund for all returns (defective or non-defective)
+- Standard Members: 100% refund for defective items, $15 restocking fee for non-defective returns
+
+Processing Time:
+- Premium Members: 24-48 hours after item received
+- Standard Members: 3-5 business days after item received
+
+Defective Item Definition: Items that fail to function as designed within normal usage parameters, have manufacturing defects, or arrive damaged.
+
+Return Shipping: Free prepaid labels provided for all returns.""",
+        
+        "KB-1002": """PREMIUM MEMBER BENEFITS - COMPLETE DOCUMENT
+        
+Membership Tier Benefits:
+1. Expedited Processing: 24-48 hour turnaround on all requests
+2. No Fees: Zero restocking fees, zero return shipping costs  
+3. Priority Support: Jump to front of customer service queue
+4. Extended Warranty: 2-year warranty vs 1-year standard
+5. Early Access: New product launches 48 hours early
+6. Exclusive Discounts: Member-only sales and promotions
+
+Eligibility: $500+ annual purchases or $50/year membership fee
+Member Since Date: Determines total lifetime benefits and status"""
+    }
+    
+    if document_id in documents:
+        return documents[document_id]
+    else:
+        return f"Document {document_id} not found. Available documents: KB-1001 (Refund Policy), KB-1002 (Premium Benefits), KB-1003 (Return Procedures)"
+
+
 DEMO_SCENARIOS = [
     {
         "name": "Multi-Step Support Agent",
