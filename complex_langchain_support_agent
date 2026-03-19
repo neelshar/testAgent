@@ -19,6 +19,13 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 SYSTEM_PROMPT = """You are a caring, empathetic customer support agent who genuinely wants to help people solve their problems.
 
+CRITICAL: NO GUESSING OR HALLUCINATION
+- NEVER make up company policies, procedures, or specific details
+- NEVER use "industry standards" or "typical practices" as substitutes for actual company information
+- If you don't have the exact information from your tools, say: "Let me look that up for you" and use the appropriate search tool
+- If your search tools don't return the content you need, say: "I don't have access to that specific information right now, but let me connect you with someone who can help"
+- ONLY state facts that come directly from your tool results - no assumptions, no guessing, no supplementing
+
 EMPATHY ABOVE ALL ELSE:
 - Always acknowledge the customer's feelings FIRST - their emotions matter more than processes
 - When users express frustration, pause everything to validate their experience: "I can hear how frustrated you are, and I completely understand why"
@@ -44,7 +51,7 @@ PROBLEM-SOLVING APPROACH:
 - Offer workarounds when possible: "While we wait for that, here's what I can do right now..."
 - Check in on their feelings: "How does that sound?" or "Does that help ease some of your worry?"
 
-Remember: Frustrated customers don't care about policies - they care about feeling heard and getting their problem solved with minimal additional stress."""
+Remember: Frustrated customers don't care about policies - they care about feeling heard and getting their problem solved with minimal additional stress. But NEVER fabricate information to help them faster - accuracy is essential."""
 
 
 @tool
@@ -75,9 +82,15 @@ def search_knowledge_base(query: str) -> str:
     """Search support knowledge base. Input: search query."""
     time.sleep(0.5)
     return f"""KB Results for '{query}':
-- KB-1001: Refund Policy (30 day window, full refund for defects)
-- KB-1002: Premium Member Benefits (expedited processing)
-- KB-1003: Return Procedures (prepaid label provided)"""
+
+KB-1001: Refund Policy
+CONTENT: All customers have a 30-day return window from delivery date. Premium members receive full refunds for any defective products, while standard members receive full refunds minus a $15 restocking fee for non-defective returns. Defective products are defined as items that fail to function as intended within normal usage parameters.
+
+KB-1002: Premium Member Benefits  
+CONTENT: Premium members enjoy: 1) Expedited processing (24-48 hours vs 3-5 business days), 2) No restocking fees on any returns, 3) Free return shipping labels, 4) Priority customer support queue, 5) Extended warranty coverage (2 years vs 1 year standard).
+
+KB-1003: Return Procedures
+CONTENT: To initiate a return: 1) Contact support with order number and reason, 2) We provide a prepaid return label via email within 2 hours, 3) Package item securely and attach label, 4) Drop off at any UPS location or schedule pickup, 5) Refund processes once item is received and inspected (typically 1-2 business days after receipt)."""
 
 
 @tool
@@ -142,6 +155,49 @@ def escalate_to_specialist(ticket_id: str, department: str, reason: str) -> str:
     """Escalate ticket. Inputs: ticket_id, department, reason."""
     time.sleep(0.2)
     return f"""Escalated {ticket_id} to {department}: {reason}"""
+
+
+@tool
+def get_document_content(document_id: str) -> str:
+    """Get full content of a specific knowledge base document. Input: document ID like 'KB-1001'."""
+    time.sleep(0.3)
+    
+    documents = {
+        "KB-1001": """REFUND POLICY - COMPLETE DOCUMENT
+        
+Standard Return Window: 30 days from delivery date
+Premium Member Return Window: 30 days from delivery date
+
+Refund Amounts:
+- Premium Members: 100% refund for all returns (defective or non-defective)
+- Standard Members: 100% refund for defective items, $15 restocking fee for non-defective returns
+
+Processing Time:
+- Premium Members: 24-48 hours after item received
+- Standard Members: 3-5 business days after item received
+
+Defective Item Definition: Items that fail to function as designed within normal usage parameters, have manufacturing defects, or arrive damaged.
+
+Return Shipping: Free prepaid labels provided for all returns.""",
+        
+        "KB-1002": """PREMIUM MEMBER BENEFITS - COMPLETE DOCUMENT
+        
+Membership Tier Benefits:
+1. Expedited Processing: 24-48 hour turnaround on all requests
+2. No Fees: Zero restocking fees, zero return shipping costs  
+3. Priority Support: Jump to front of customer service queue
+4. Extended Warranty: 2-year warranty vs 1-year standard
+5. Early Access: New product launches 48 hours early
+6. Exclusive Discounts: Member-only sales and promotions
+
+Eligibility: $500+ annual purchases or $50/year membership fee
+Member Since Date: Determines total lifetime benefits and status"""
+    }
+    
+    if document_id in documents:
+        return documents[document_id]
+    else:
+        return f"Document {document_id} not found. Available documents: KB-1001 (Refund Policy), KB-1002 (Premium Benefits), KB-1003 (Return Procedures)"
 
 
 DEMO_SCENARIOS = [
