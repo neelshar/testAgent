@@ -82,9 +82,15 @@ def search_knowledge_base(query: str) -> str:
     """Search support knowledge base. Input: search query."""
     time.sleep(0.5)
     return f"""KB Results for '{query}':
-- KB-1001: Refund Policy (30 day window, full refund for defects)
-- KB-1002: Premium Member Benefits (expedited processing)
-- KB-1003: Return Procedures (prepaid label provided)"""
+
+KB-1001: Refund Policy
+CONTENT: All customers have a 30-day return window from delivery date. Premium members receive full refunds for any defective products, while standard members receive full refunds minus a $15 restocking fee for non-defective returns. Defective products are defined as items that fail to function as intended within normal usage parameters.
+
+KB-1002: Premium Member Benefits  
+CONTENT: Premium members enjoy: 1) Expedited processing (24-48 hours vs 3-5 business days), 2) No restocking fees on any returns, 3) Free return shipping labels, 4) Priority customer support queue, 5) Extended warranty coverage (2 years vs 1 year standard).
+
+KB-1003: Return Procedures
+CONTENT: To initiate a return: 1) Contact support with order number and reason, 2) We provide a prepaid return label via email within 2 hours, 3) Package item securely and attach label, 4) Drop off at any UPS location or schedule pickup, 5) Refund processes once item is received and inspected (typically 1-2 business days after receipt)."""
 
 
 @tool
