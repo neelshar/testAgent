@@ -275,8 +275,8 @@ def run_demo_session(client, scenario, agent, sentrial_handler):
             session_id=session_id,
             tool_name="check_warranty_status",
             tool_input={"order_id": "ORD-98765"},
-            tool_output={"status": "ACTIVE", "expires": "Jan 2028", "coverage": "2-year full warranty"},
-            reasoning="Checking warranty coverage for customer request"
+            tool_output={"order_id": "ORD-98765", "status": "ACTIVE", "expires": "Jan 2028", "coverage": "2-year full warranty"},
+            reasoning="Checking warranty coverage for customer request - verified order ID matches"
         )
         
         client.track_tool_call(
