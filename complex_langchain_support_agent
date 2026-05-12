@@ -157,6 +157,33 @@ def send_customer_email(customer_id: str, template: str, subject: str) -> str:
 
 
 @tool
+def verify_data_match(user_input: str, retrieved_data: str, data_type: str) -> str:
+    """Verify that retrieved data matches user's request. Inputs: user_input (what customer said), retrieved_data (what tool returned), data_type (customer_id, order_id, product_name, etc.)."""
+    time.sleep(0.1)
+    
+    # Extract key identifiers for comparison
+    user_lower = user_input.lower()
+    data_lower = retrieved_data.lower()
+    
+    # Check for common mismatches
+    if data_type == "customer_id":
+        if "cust-" in user_lower and "cust-" in data_lower:
+            user_id = [x for x in user_input.split() if "cust-" in x.lower()]
+            data_id = [x for x in retrieved_data.split() if "cust-" in x.lower()]
+            if user_id and data_id and user_id[0].lower() != data_id[0].lower():
+                return f"❌ MISMATCH DETECTED: User requested {user_id[0]}, but retrieved {data_id[0]}"
+    
+    elif data_type == "order_id":
+        if "ord-" in user_lower and "ord-" in data_lower:
+            user_order = [x for x in user_input.split() if "ord-" in x.lower()]
+            data_order = [x for x in retrieved_data.split() if "ord-" in x.lower()]
+            if user_order and data_order and user_order[0].lower() != data_order[0].lower():
+                return f"❌ MISMATCH DETECTED: User requested {user_order[0]}, but retrieved {data_order[0]}"
+    
+    return f"✅ DATA VERIFIED: {data_type} matches user request"
+
+
+@tool
 def escalate_to_specialist(ticket_id: str, department: str, reason: str) -> str:
     """Escalate ticket. Inputs: ticket_id, department, reason."""
     time.sleep(0.2)
